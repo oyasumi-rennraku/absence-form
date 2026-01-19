@@ -102,7 +102,8 @@ async function loadDepartments() {
   message.innerText = "所属一覧を読み込み中…";
 
   try {
-    const url = `${SUPABASE_URL}/rest/v1/departments?select=department_name&active=eq.true&order=department_name.asc`;
+    const url = `${SUPABASE_URL}/rest/v1/departments?select=department_name,active&active=eq.true&order=department_name.asc`;
+
     const res = await fetch(url, {
       method: "GET",
       headers: {
@@ -119,7 +120,7 @@ async function loadDepartments() {
     const rows = await res.json();
 
     if (!rows.length) {
-      message.innerText = "所属が0件です（departmentsにデータが入っているか確認してください）";
+      message.innerText = "所属が0件です（departmentsにデータがあるか/activeがtrueか確認）";
       return;
     }
 
@@ -136,13 +137,14 @@ async function loadDepartments() {
     select.innerHTML = '<option value="">所属の取得に失敗しました</option>';
   }
 }
-
  window.addEventListener("DOMContentLoaded", loadDepartments);
+
 </script>
 
 
 </body>
 </html>
+
 
 
 
