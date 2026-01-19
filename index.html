@@ -130,7 +130,7 @@ async function loadDepartments() {
       select.appendChild(opt);
     });
 
-    message.innerText = "所属一覧の読み込み完了";
+  //  message.innerText = "所属一覧の読み込み完了";
   } catch (e) {
     message.innerText = `所属の取得に失敗: ${e.message}`;
     select.innerHTML = '<option value="">所属の取得に失敗しました</option>';
@@ -143,6 +143,7 @@ async function loadDepartments() {
 
 </body>
 </html>
+
 
 
 
