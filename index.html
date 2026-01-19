@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>欠勤・遅刻連絡フォーム</title>
+  <title>野田瀬戸支店　休み・遅刻　連絡フォーム</title>
 
   <style>
     body {
@@ -55,16 +55,12 @@
 
 <body>
   <div class="container">
-    <h2>欠勤・遅刻連絡</h2>
+    <h2>欠勤連絡</h2>
 
     <form id="absenceForm" onsubmit="event.preventDefault(); submitForm();">
 
       <label>名前
         <input id="name" required />
-      </label>
-
-      <label>社員番号
-        <input id="employee_no" required />
       </label>
 
       <label>所属
@@ -90,8 +86,8 @@
   </div>
 
 <script>
-const SUPABASE_URL = "https://ffpuqxyufqugotivqkgi.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmcHVxeHl1ZnF1Z290aXZxa2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg1MzA4MTksImV4cCI6MjA4NDEwNjgxOX0.pIHkRyoUMf-fUxH64CZIvt457qJSL_NbCANCWRSYSNg";
+const SUPABASE_URL = "https://xxxxxxxx.supabase.co";   // ← そのまま
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIs...";        // ← そのまま
 
 let sending = false;
 
@@ -108,7 +104,6 @@ async function submitForm() {
 
   const data = {
     name: document.getElementById("name").value,
-    employee_no: document.getElementById("employee_no").value,
     department: document.getElementById("department").value,
     type: document.getElementById("type").value,
     comment: document.getElementById("comment").value
@@ -128,7 +123,7 @@ async function submitForm() {
 
     if (res.ok) {
       message.innerText = "送信しました。ご連絡ありがとうございます。";
-      document.getElementById("absenceForm").reset(); // ← 入力クリア
+      document.getElementById("absenceForm").reset();
     } else {
       message.innerText = "送信に失敗しました。再度お試しください。";
     }
