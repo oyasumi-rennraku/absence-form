@@ -124,27 +124,51 @@
     });
     showTable(rows.length>0);
   }
+function formatJst(isoString){
+  if(!isoString) return "";
+  const d = new Date(isoString);
+  const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
 
-  function downloadCSV(rows){
-    if(!rows.length){ msg("対象データがありません（0件）"); return; }
-    const headers = ["created_at","name","department","type","comment"];
-    const lines = [
-      headers.join(","),
-      ...rows.map(r=>headers.map(h=>csvEscape(r[h])).join(","))
-    ];
-   const bom = "\uFEFF";
-const blob = new Blob([bom + lines.join("\n")], {
-  type: "text/csv;charset=utf-8;"
-});
+  const y = jst.getFullYear();
+  const m = String(jst.getMonth() + 1).padStart(2, "0");
+  const day = String(jst.getDate()).padStart(2, "0");
+  const hh = String(jst.getHours()).padStart(2, "0");
+  const mm = String(jst.getMinutes()).padStart(2, "0");
 
-    const start = document.getElementById("startDate").value || "all";
-    const end = document.getElementById("endDate").value || "all";
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `absence_reports_${start}_${end}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  }
+  return `${y}-${m}-${day} ${hh}:${mm}`;
+}
+
+function downloadCSV(rows){
+  if(!rows.length){ msg("対象データがありません（0件）"); return; }
+
+  // CSVのヘッダー（1列目を datetime にする）
+  const headers = ["datetime","name","department","type","comment"];
+
+  const lines = [
+    headers.join(","),
+    ...rows.map(r => [
+      csvEscape(formatJst(r.created_at)), // ★ここがJST整形
+      csvEscape(r.name),
+      csvEscape(r.department),
+      csvEscape(r.type),
+      csvEscape(r.comment)
+    ].join(","))
+  ];
+
+  // ★Excel文字化け対策（BOM付きUTF-8）
+  const bom = "\uFEFF";
+  const blob = new Blob([bom + lines.join("\n")], { type:"text/csv;charset=utf-8;" });
+
+  const start = document.getElementById("startDate").value || "all";
+  const end = document.getElementById("endDate").value || "all";
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `absence_reports_${start}_${end}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 function formatJst(isoString){
   if(!isoString) return "";
   const d = new Date(isoString);
@@ -186,5 +210,6 @@ function formatJst(isoString){
 </script>
 </body>
 </html>
+
 
 
