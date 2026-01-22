@@ -132,7 +132,11 @@
       headers.join(","),
       ...rows.map(r=>headers.map(h=>csvEscape(r[h])).join(","))
     ];
-    const blob = new Blob([lines.join("\n")], { type:"text/csv;charset=utf-8;" });
+   const bom = "\uFEFF";
+const blob = new Blob([bom + lines.join("\n")], {
+  type: "text/csv;charset=utf-8;"
+});
+
     const start = document.getElementById("startDate").value || "all";
     const end = document.getElementById("endDate").value || "all";
     const a = document.createElement("a");
@@ -167,3 +171,4 @@
 </script>
 </body>
 </html>
+
