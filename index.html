@@ -151,6 +151,7 @@ async function submitForm() {
   };
 function updateNowTime(){
   const el = document.getElementById("nowTime");
+  console.log("updateNowTime OK");
   if (!el) return; // ← これでエラーで止まらない
 
   const d = new Date(); // 日本時間
