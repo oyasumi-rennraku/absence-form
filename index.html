@@ -190,7 +190,12 @@ function updateNowTime(){
   }
 }
 
-window.addEventListener("DOMContentLoaded", loadDepartments);
+window.addEventListener("DOMContentLoaded", () => {
+  loadDepartments();     // 既存
+  updateNowTime();       // 初回表示
+  setInterval(updateNowTime, 1000); // ★ 1秒ごとに更新
+});
+
 </script>
 
 
