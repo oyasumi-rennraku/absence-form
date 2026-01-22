@@ -71,6 +71,12 @@
   function toJstStartISO(d){ return `${d}T00:00:00+09:00`; }
   function toJstEndISO(d){ return `${d}T23:59:59+09:00`; }
 
+   function fmtJstText(s){
+  if(!s) return "";
+  // 2026-01-23T17:02:15 → 2026-01-23 17:02:15
+  return String(s).replace("T", " ").slice(0, 19);
+}
+
   function esc(v){
     if(v==null) return "";
     return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
@@ -125,7 +131,7 @@
     rows.forEach(r=>{
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${formatJst(r.created_at)}</td>
+       <td>${fmtJstText(r.created_at_jst)}</td>
         <td>${esc(r.name)}</td>
         <td>${esc(r.department)}</td>
         <td>${esc(r.type)}</td>
@@ -222,6 +228,7 @@ function formatJst(isoString){
 </script>
 </body>
 </html>
+
 
 
 
