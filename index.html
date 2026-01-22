@@ -209,6 +209,28 @@ window.addEventListener("DOMContentLoaded", () => {
 </script>
 
 
+<script>
+  function updateNowTime(){
+    const el = document.getElementById("nowTime");
+    if (!el) return;
+
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    const ss = String(d.getSeconds()).padStart(2, "0");
+
+    el.innerText = `現在日時：${y}-${m}-${day} ${hh}:${mm}:${ss}`;
+  }
+
+  // ★ DOMが完全に描画された後に必ず実行
+  document.addEventListener("DOMContentLoaded", () => {
+    updateNowTime();
+    setInterval(updateNowTime, 1000);
+  });
+</script>
 
 </body>
 </html>
