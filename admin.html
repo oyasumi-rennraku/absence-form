@@ -1,133 +1,213 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>欠勤連絡管理画面</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <style>
-        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; }
-        h1 { color: #333; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
-        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
-        th { background-color: #eee; }
-        .controls { margin-bottom: 20px; }
-        button { 
-            padding: 10px 15px; 
-            background-color: #28a745; 
-            color: white; 
-            border: none; 
-            cursor: pointer; 
-            font-weight: bold;
-            border-radius: 4px;
-        }
-        button:hover { background-color: #218838; }
-        #status { margin-top: 10px; color: #666; }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>野田瀬戸支店　欠勤連絡 管理ページ（閲覧・CSV）</title>
+  <style>
+    body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;padding:20px}
+    .card{max-width:1050px;margin:auto;background:#fff;padding:18px;border-radius:10px}
+    h2{margin:0 0 12px;text-align:center}
+    label{display:block;margin-top:10px;font-weight:600}
+    input,button{width:100%;padding:10px;margin-top:6px;font-size:16px;box-sizing:border-box}
+    button{background:#0070f3;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-top:12px}
+    button:disabled{background:#999;cursor:not-allowed}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+    table{width:100%;border-collapse:collapse;margin-top:14px}
+    th,td{border:1px solid #ddd;padding:8px;font-size:14px;vertical-align:top}
+    th{background:#fafafa}
+    #msg{margin-top:10px;font-weight:700;text-align:center}
+    .muted{color:#666;font-size:12px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    .pill{font-size:12px;background:#f0f0f0;padding:6px 10px;border-radius:999px}
+  </style>
 </head>
 <body>
-
-    <h1>欠勤連絡一覧 (管理画面)</h1>
-    
-    <div class="controls">
-        <button onclick="downloadExcel()">Excel形式でダウンロード</button>
-        <p id="status">データを読み込んでいます...</p>
+  <div class="card">
+    <div class="topbar">
+      <h2>野田瀬戸支店　欠勤連絡 管理ページ（閲覧・CSV）</h2>
+      <div class="pill">管理者のみ共有（URL秘匿）</div>
     </div>
 
-    <table id="absenceTable">
-        <thead>
-            <tr>
-                <th>日時</th>
-                <th>名前</th>
-                <th>所属</th>
-                <th>理由</th>
-                <th>詳細</th>
-            </tr>
-        </thead>
-        <tbody>
-            </tbody>
+    <div class="row">
+      <label>開始日（任意）
+        <input id="startDate" type="date">
+      </label>
+      <label>終了日（任意）
+        <input id="endDate" type="date">
+      </label>
+    </div>
+
+    <div class="actions">
+      <button id="searchBtn">表示（検索）</button>
+      <button id="csvBtn" style="background:#2b7;">CSVダウンロード</button>
+    </div>
+
+    <div id="msg"></div>
+    <div class="muted">※ 日付は日本時間（JST）で指定。未指定なら全件対象。</div>
+
+    <table id="tbl" style="display:none;">
+      <thead>
+        <tr>
+          <th>送信日時</th>
+          <th>名前</th>
+          <th>所属</th>
+          <th>種別</th>
+          <th>コメント</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
     </table>
+  </div>
 
-    <script>
-        // GitHub Pages上のCSVファイルのパス
-        const csvUrl = 'https://oyasumi-rennraku.github.io/absence-form/absence_data.csv';
+<script>
+  const SUPABASE_URL = "https://ffpuqxyufqugotivqkgi.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_5247tSd7ptdrSv6y0972rA_zm_6t99i";
 
-        async function fetchCSV() {
-            try {
-                // キャッシュ回避のためタイムスタンプを付与
-                const response = await fetch(`${csvUrl}?t=${new Date().getTime()}`);
-                if (!response.ok) throw new Error('データの読み込みに失敗しました');
-                
-                const csvText = await response.text();
-                displayData(csvText);
-                document.getElementById('status').innerText = '最新のデータを表示中';
-            } catch (error) {
-                console.error(error);
-                document.getElementById('status').innerText = 'エラー: データの取得に失敗しました';
-            }
-        }
+  const msg = (t)=>{ const el=document.getElementById("msg"); if(el) el.innerText=t||""; };
+  const showTable = (on)=>{ const t=document.getElementById("tbl"); if(t) t.style.display = on ? "table" : "none"; };
 
-        function displayData(csvText) {
-            const lines = csvText.trim().split('\n');
-            const tbody = document.querySelector('#absenceTable tbody');
-            tbody.innerHTML = '';
+  function esc(v){
+    if(v==null) return "";
+    return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+  }
 
-            // ヘッダーを除いた2行目からループ
-            for (let i = 1; i < lines.length; i++) {
-                // カンマ区切りだが、詳細欄の引用符や改行に対応するため簡易的な正規表現で分割
-                const row = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                if (row.length < 5) continue;
+  // DBの created_at_jst (timestamp) を「YYYY-MM-DD HH:MM:SS」に
+  function fmtJstText(s){
+    if(!s) return "";
+    // 2026-01-23T17:02:15 → 2026-01-23 17:02:15
+    return String(s).replace("T", " ").slice(0, 19);
+  }
 
-                const tr = document.createElement('tr');
-                row.forEach((cell, index) => {
-                    const td = document.createElement('td');
-                    // 引用符の除去と改行コードの置換
-                    td.innerText = cell.replace(/^"|"$/g, '').replace(/\\n/g, '\n');
-                    tr.appendChild(td);
-                });
-                tbody.prepend(tr); // 新しい連絡を上に表示
-            }
-        }
+  function csvEscape(v){
+    if(v==null) return "";
+    const s=String(v);
+    return /[",\n]/.test(s) ? `"${s.replaceAll('"','""')}"` : s;
+  }
 
-        function downloadExcel() {
-            const table = document.getElementById("absenceTable");
-            
-            // 1. テーブルからワークシートを作成
-            const ws = XLSX.utils.table_to_sheet(table);
+  async function fetchRows(){
+    const start = document.getElementById("startDate").value; // YYYY-MM-DD
+    const end = document.getElementById("endDate").value;
 
-            // 2. 列幅の設定 (wpx = ピクセル)
-            ws['!cols'] = [
-                { wpx: 140 }, // 日時
-                { wpx: 100 }, // 名前
-                { wpx: 80 },  // 所属
-                { wpx: 100 }, // 理由
-                { wpx: 450 }  // 詳細（長文が見えるように広く設定）
-            ];
+    const params = new URLSearchParams();
+    params.set("select", "created_at_jst,name,department,type,comment");
+    params.set("order", "created_at_jst.asc");
 
-            // 3. すべてのセルに対して「折り返し設定」を付与
-            // (Excelで開いた時に自動で高さが調整されるようにします)
-            const range = XLSX.utils.decode_range(ws['!ref']);
-            for (let R = range.s.r; R <= range.e.r; ++R) {
-                for (let C = range.s.c; C <= range.e.c; ++C) {
-                    const cell_address = { c: C, r: R };
-                    const cell_ref = XLSX.utils.encode_cell(cell_address);
-                    if (!ws[cell_ref]) continue;
-                    if (!ws[cell_ref].s) ws[cell_ref].s = {};
-                    ws[cell_ref].s.alignment = { wrapText: true, vertical: 'top' };
-                }
-            }
+    if (start) params.append("created_at_jst", `gte.${start}T00:00:00`);
+    if (end)   params.append("created_at_jst", `lte.${end}T23:59:59`);
 
-            // 4. ワークブックの作成と保存
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "欠勤連絡一覧");
+    const url = `${SUPABASE_URL}/rest/v1/absence_reports?${params.toString()}`;
 
-            const now = new Date();
-            const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-            XLSX.writeFile(wb, `野田瀬戸支店_欠勤連絡_${dateStr}.xlsx`);
-        }
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Accept": "application/json"
+      }
+    });
 
-        // 初回読み込み
-        fetchCSV();
-    </script>
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(`HTTP ${res.status}: ${t}`);
+    }
+    return await res.json();
+  }
+
+  function renderTable(rows){
+    const tbody = document.getElementById("tbody");
+    tbody.innerHTML = "";
+
+    rows.forEach(r=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${esc(fmtJstText(r.created_at_jst))}</td>
+        <td>${esc(r.name)}</td>
+        <td>${esc(r.department)}</td>
+        <td>${esc(r.type)}</td>
+        <td>${esc(r.comment)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    showTable(rows.length > 0);
+  }
+
+  function downloadCSV(rows){
+    if(!rows.length){ msg("対象データがありません（0件）"); return; }
+
+    const headers = ["日時","名前","所属","理由","詳細"];
+    const lines = [
+      headers.join(","),
+      ...rows.map(r => [
+        csvEscape(fmtJstText(r.created_at_jst)),
+        csvEscape(r.name),
+        csvEscape(r.department),
+        csvEscape(r.type),
+        csvEscape(r.comment)
+      ].join(","))
+    ];
+
+    // Excel文字化け対策（BOM）
+    const bom = "\uFEFF";
+    const blob = new Blob([bom + lines.join("\n")], { type:"text/csv;charset=utf-8;" });
+
+    const start = document.getElementById("startDate").value || "all";
+    const end = document.getElementById("endDate").value || "all";
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "野田瀬戸支店　欠勤連絡一覧.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  // ★ ボタンのイベントは「DOMができてから」必ず登録する
+  document.addEventListener("DOMContentLoaded", () => {
+    const searchBtn = document.getElementById("searchBtn");
+    const csvBtn = document.getElementById("csvBtn");
+
+    if(!searchBtn || !csvBtn){
+      msg("ボタンIDが見つかりません（searchBtn / csvBtn を確認してください）");
+      return;
+    }
+
+    searchBtn.onclick = async ()=>{
+      msg("取得中…");
+      try{
+        const rows = await fetchRows();
+        renderTable(rows);
+        msg(rows.length ? `表示しました（${rows.length}件）` : "0件です");
+      }catch(e){
+        msg("失敗: " + (e.message || e));
+        showTable(false);
+      }
+    };
+
+    csvBtn.onclick = async ()=>{
+      msg("CSV作成中…");
+      try{
+        const rows = await fetchRows();
+        downloadCSV(rows);
+        msg("CSVをダウンロードしました");
+      }catch(e){
+        msg("失敗: " + (e.message || e));
+      }
+    };
+  });
+</script>
+
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
