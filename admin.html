@@ -74,7 +74,7 @@
 
   async function fetchRows(){
     const start = document.getElementById("startDate").value;
-    const end = document.getElementById("endDate").value;
+    params.set("order", "created_at_jst.asc"); // asc に変えると古い順（元通り）
 
     const params = new URLSearchParams();
     // フィルタ（branch）を一切かけず、以前の動作に完全に戻しました
