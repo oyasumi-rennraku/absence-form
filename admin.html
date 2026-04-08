@@ -79,7 +79,7 @@
     const params = new URLSearchParams();
     // フィルタ（branch）を一切かけず、以前の動作に完全に戻しました
     params.set("select", "created_at_jst,name,department,status,type,comment");
-    params.set("order", "created_at_jst.desc");
+    params.set("order", "created_at_jst.asc");
 
     if (start) params.append("created_at_jst", `gte.${start}T00:00:00`);
     if (end)   params.append("created_at_jst", `lte.${end}T23:59:59`);
