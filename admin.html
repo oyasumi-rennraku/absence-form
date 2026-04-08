@@ -3,211 +3,188 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>野田瀬戸支店　欠勤連絡 管理ページ（閲覧・CSV）</title>
+  <title>野田瀬戸支店 管理ページ</title>
   <style>
-    body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;padding:20px}
-    .card{max-width:1050px;margin:auto;background:#fff;padding:18px;border-radius:10px}
-    h2{margin:0 0 12px;text-align:center}
-    label{display:block;margin-top:10px;font-weight:600}
-    input,button{width:100%;padding:10px;margin-top:6px;font-size:16px;box-sizing:border-box}
-    button{background:#0070f3;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-top:12px}
-    button:disabled{background:#999;cursor:not-allowed}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
-    table{width:100%;border-collapse:collapse;margin-top:14px}
-    th,td{border:1px solid #ddd;padding:8px;font-size:14px;vertical-align:top}
-    th{background:#fafafa}
-    #msg{margin-top:10px;font-weight:700;text-align:center}
-    .muted{color:#666;font-size:12px}
-    .topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-    .pill{font-size:12px;background:#f0f0f0;padding:6px 10px;border-radius:999px}
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f5; padding: 20px; margin: 0; }
+    .card { max-width: 1200px; margin: 20px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; height: 90vh; }
+    
+    /* ヘッダー固定エリア */
+    .header-area { padding: 20px; border-bottom: 2px solid #eee; background: #fff; z-index: 10; }
+    h2 { margin: 0 0 12px; text-align: center; color: #333; }
+    
+    .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+    label { display: block; font-weight: 600; font-size: 14px; }
+    input, select, button { width: 100%; padding: 10px; margin-top: 5px; font-size: 14px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; }
+    
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    #searchBtn { background: #0070f3; color: #fff; border: none; cursor: pointer; font-weight: bold; }
+    #csvBtn { background: #2b7; color: #fff; border: none; cursor: pointer; font-weight: bold; }
+    button:hover { opacity: 0.8; }
+    
+    /* テーブル固定ヘッダー */
+    .table-container { flex: 1; overflow-y: auto; padding: 0 20px; }
+    table { width: 100%; border-collapse: collapse; min-width: 800px; }
+    thead th { position: sticky; top: 0; background: #fafafa; z-index: 5; border-bottom: 2px solid #ddd; }
+    th, td { border: 1px solid #ddd; padding: 12px 8px; font-size: 14px; text-align: left; }
+    tr:nth-child(even) { background: #f9f9f9; }
+
+    /* ページ送り */
+    .pagination { padding: 15px; border-top: 1px solid #eee; display: flex; justify-content: center; align-items: center; gap: 20px; background: #fff; }
+    .page-btn { width: auto; min-width: 100px; margin: 0; background: #666; color: white; border: none; }
+    
+    #msg { margin: 10px 0; font-weight: 700; text-align: center; color: #0070f3; }
+    .muted { color: #666; font-size: 12px; text-align: center; margin-bottom: 5px; }
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="topbar">
-      <h2>野田瀬戸支店　欠勤連絡 管理ページ（閲覧・CSV）</h2>
-      <div class="pill">管理者のみ共有（URL秘匿）</div>
+    <div class="header-area">
+      <h2>野田瀬戸支店　欠勤連絡一覧</h2>
+      
+      <div class="row">
+        <label>開始日
+          <input id="startDate" type="date">
+        </label>
+        <label>終了日
+          <input id="endDate" type="date">
+        </label>
+        <label>所属フィルター
+          <select id="filterDept">
+            <option value="">全所属表示</option>
+            <option value="Francfranc">Francfranc</option>
+            </select>
+        </label>
+      </div>
+
+      <div class="actions">
+        <button id="searchBtn">表示（検索）</button>
+        <button id="csvBtn">CSVダウンロード</button>
+      </div>
+      <div id="msg"></div>
+      <div class="muted">※ 10件ずつ表示します。スクロールしても見出しは固定されます。</div>
     </div>
 
-    <div class="row">
-      <label>開始日（任意）
-        <input id="startDate" type="date">
-      </label>
-      <label>終了日（任意）
-        <input id="endDate" type="date">
-      </label>
+    <div class="table-container">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th style="width: 160px;">送信日時</th>
+            <th style="width: 120px;">名前</th>
+            <th style="width: 100px;">種別</th>
+            <th style="width: 120px;">所属</th>
+            <th style="width: 120px;">理由</th>
+            <th>詳細（コメント）</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
     </div>
 
-    <div class="actions">
-      <button id="searchBtn">表示（検索）</button>
-      <button id="csvBtn" style="background:#2b7;">CSVダウンロード</button>
+    <div class="pagination">
+      <button id="prevBtn" class="page-btn" disabled>前へ</button>
+      <span id="pageLabel">Page 1</span>
+      <button id="nextBtn" class="page-btn" disabled>次へ</button>
     </div>
-
-    <div id="msg"></div>
-    <div class="muted">※ 日付は日本時間（JST）で指定。未指定なら全件対象。</div>
-
-    <table id="tbl" style="display:none;">
-      <thead>
-        <tr>
-          <th>送信日時</th>
-          <th>名前</th>
-          <th>所属</th>
-          <th>種別</th>
-          <th>コメント</th>
-        </tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
   </div>
 
 <script>
   const SUPABASE_URL = "https://ffpuqxyufqugotivqkgi.supabase.co";
   const SUPABASE_KEY = "sb_publishable_5247tSd7ptdrSv6y0972rA_zm_6t99i";
+  const MY_BRANCH = "Seto"; // ★この管理画面は瀬戸支店専用
 
-  const msg = (t)=>{ const el=document.getElementById("msg"); if(el) el.innerText=t||""; };
-  const showTable = (on)=>{ const t=document.getElementById("tbl"); if(t) t.style.display = on ? "table" : "none"; };
+  let currentPage = 0;
+  const PAGE_SIZE = 10;
+  let allRows = [];
 
-  function esc(v){
-    if(v==null) return "";
-    return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
-  }
+  const msg = (t) => { document.getElementById("msg").innerText = t || ""; };
 
-  // DBの created_at_jst (timestamp) を「YYYY-MM-DD HH:MM:SS」に
-  function fmtJstText(s){
-    if(!s) return "";
-    // 2026-01-23T17:02:15 → 2026-01-23 17:02:15
-    return String(s).replace("T", " ").slice(0, 19);
-  }
+  function fmtJstText(s){ return s ? String(s).replace("T", " ").slice(0, 19) : ""; }
 
-  function csvEscape(v){
-    if(v==null) return "";
-    const s=String(v);
-    return /[",\n]/.test(s) ? `"${s.replaceAll('"','""')}"` : s;
-  }
-
-  async function fetchRows(){
-    const start = document.getElementById("startDate").value; // YYYY-MM-DD
+  // データを取得する関数（支店フィルター付き）
+  async function fetchRows() {
+    const start = document.getElementById("startDate").value;
     const end = document.getElementById("endDate").value;
+    const dept = document.getElementById("filterDept").value;
 
     const params = new URLSearchParams();
-    params.set("select", "created_at_jst,name,department,type,comment");
-    params.set("order", "created_at_jst.asc");
+    params.set("branch", `eq.${MY_BRANCH}`); // ★ここで自支店のみに絞り込み
+    params.set("order", "created_at_jst.desc");
 
     if (start) params.append("created_at_jst", `gte.${start}T00:00:00`);
     if (end)   params.append("created_at_jst", `lte.${end}T23:59:59`);
+    if (dept)  params.append("department", `eq.${dept}`); // ★所属フィルター
 
     const url = `${SUPABASE_URL}/rest/v1/absence_reports?${params.toString()}`;
-
     const res = await fetch(url, {
-      method: "GET",
-      headers: {
-        "apikey": SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "Accept": "application/json"
-      }
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
     });
-
-    if (!res.ok) {
-      const t = await res.text();
-      throw new Error(`HTTP ${res.status}: ${t}`);
-    }
+    if (!res.ok) throw new Error("取得失敗");
     return await res.json();
   }
 
-  function renderTable(rows){
+  function updateTable() {
     const tbody = document.getElementById("tbody");
     tbody.innerHTML = "";
 
-    rows.forEach(r=>{
+    const startIdx = currentPage * PAGE_SIZE;
+    const pagedData = allRows.slice(startIdx, startIdx + PAGE_SIZE);
+
+    pagedData.forEach(r => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${esc(fmtJstText(r.created_at_jst))}</td>
-        <td>${esc(r.name)}</td>
-        <td>${esc(r.department)}</td>
-        <td>${esc(r.type)}</td>
-        <td>${esc(r.comment)}</td>
+        <td>${fmtJstText(r.created_at_jst)}</td>
+        <td><b>${r.name || ""}</b></td>
+        <td>${r.status || "不明"}</td>
+        <td>${r.department || ""}</td>
+        <td>${r.type || ""}</td>
+        <td>${r.comment || ""}</td>
       `;
       tbody.appendChild(tr);
     });
 
-    showTable(rows.length > 0);
+    // ボタンの制御
+    document.getElementById("prevBtn").disabled = (currentPage === 0);
+    document.getElementById("nextBtn").disabled = (startIdx + PAGE_SIZE >= allRows.length);
+    document.getElementById("pageLabel").innerText = `Page ${currentPage + 1} / ${Math.ceil(allRows.length / PAGE_SIZE) || 1}`;
   }
 
-  function downloadCSV(rows){
-    if(!rows.length){ msg("対象データがありません（0件）"); return; }
-
-    const headers = ["日時","名前","所属","理由","詳細"];
+  function downloadCSV() {
+    if (!allRows.length) { alert("データがありません"); return; }
+    const headers = ["日時", "名前", "種別", "所属", "理由", "詳細"];
     const lines = [
       headers.join(","),
-      ...rows.map(r => [
-        csvEscape(fmtJstText(r.created_at_jst)),
-        csvEscape(r.name),
-        csvEscape(r.department),
-        csvEscape(r.type),
-        csvEscape(r.comment)
+      ...allRows.map(r => [
+        `"${fmtJstText(r.created_at_jst)}"`,
+        `"${r.name}"`,
+        `"${r.status || ''}"`,
+        `"${r.department}"`,
+        `"${r.type}"`,
+        `"${(r.comment || '').replace(/"/g, '""')}"`
       ].join(","))
     ];
-
-    // Excel文字化け対策（BOM）
-    const bom = "\uFEFF";
-    const blob = new Blob([bom + lines.join("\n")], { type:"text/csv;charset=utf-8;" });
-
-    const start = document.getElementById("startDate").value || "all";
-    const end = document.getElementById("endDate").value || "all";
-
+    const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "野田瀬戸支店　欠勤連絡一覧.csv";
+    a.download = `野田瀬戸支店_欠勤連絡_${new Date().toLocaleDateString()}.csv`;
     a.click();
-    URL.revokeObjectURL(a.href);
   }
 
-  // ★ ボタンのイベントは「DOMができてから」必ず登録する
   document.addEventListener("DOMContentLoaded", () => {
-    const searchBtn = document.getElementById("searchBtn");
-    const csvBtn = document.getElementById("csvBtn");
-
-    if(!searchBtn || !csvBtn){
-      msg("ボタンIDが見つかりません（searchBtn / csvBtn を確認してください）");
-      return;
-    }
-
-    searchBtn.onclick = async ()=>{
-      msg("取得中…");
-      try{
-        const rows = await fetchRows();
-        renderTable(rows);
-        msg(rows.length ? `表示しました（${rows.length}件）` : "0件です");
-      }catch(e){
-        msg("失敗: " + (e.message || e));
-        showTable(false);
-      }
+    document.getElementById("searchBtn").onclick = async () => {
+      msg("取得中...");
+      try {
+        allRows = await fetchRows();
+        currentPage = 0;
+        updateTable();
+        msg(`表示完了（全${allRows.length}件）`);
+      } catch (e) { msg("エラーが発生しました"); }
     };
 
-    csvBtn.onclick = async ()=>{
-      msg("CSV作成中…");
-      try{
-        const rows = await fetchRows();
-        downloadCSV(rows);
-        msg("CSVをダウンロードしました");
-      }catch(e){
-        msg("失敗: " + (e.message || e));
-      }
-    };
+    document.getElementById("csvBtn").onclick = downloadCSV;
+
+    document.getElementById("prevBtn").onclick = () => { if(currentPage > 0){ currentPage--; updateTable(); } };
+    document.getElementById("nextBtn").onclick = () => { if((currentPage + 1) * PAGE_SIZE < allRows.length){ currentPage++; updateTable(); } };
   });
 </script>
-
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
