@@ -181,6 +181,7 @@ async function submitForm() {
   const data = {
     name: document.getElementById("name").value,
     branch: 'Seto', // ★ここを追加！
+    status: document.getElementById("status").value, // ★HTMLに足したID="status"を読み込む
     department: document.getElementById("department").value,
     type: document.getElementById("type").value,
     comment: commentTrimmed // ★trim後を保存
