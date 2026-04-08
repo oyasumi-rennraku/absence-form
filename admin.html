@@ -53,7 +53,6 @@
           <th>送信日時</th>
           <th>名前</th>
           <th>所属</th>
-          <th>種別</th>
           <th>理由</th>
           <th>コメント</th>
         </tr>
@@ -74,24 +73,19 @@
 
   async function fetchRows(){
     const start = document.getElementById("startDate").value;
-    const end = document.getElementById("endDate").value; // ここが抜けていたのを修正
+    const end = document.getElementById("endDate").value;
 
-    // 1. まず params を定義する
     const params = new URLSearchParams();
-
-    // 2. その後に値を設定する（順番を修正しました）
-    params.set("select", "created_at_jst,name,department,status,type,comment");
-    params.set("order", "created_at_jst.asc"); // 古い順に表示
+    // ★ 削除した status と branch をセレクト対象から外しました
+    params.set("select", "created_at_jst,name,department,type,comment");
+    params.set("order", "created_at_jst.asc");
 
     if (start) params.append("created_at_jst", `gte.${start}T00:00:00`);
     if (end)   params.append("created_at_jst", `lte.${end}T23:59:59`);
 
     const url = `${SUPABASE_URL}/rest/v1/absence_reports?${params.toString()}`;
     const res = await fetch(url, {
-      headers: { 
-        "apikey": SUPABASE_KEY, 
-        "Authorization": `Bearer ${SUPABASE_KEY}` 
-      }
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
     });
     
     if (!res.ok) throw new Error("取得失敗");
@@ -103,11 +97,11 @@
     tbody.innerHTML = "";
     rows.forEach(r=>{
       const tr = document.createElement("tr");
+      // ★ テーブルの表示項目も元に戻しました
       tr.innerHTML = `
         <td>${esc(fmtJstText(r.created_at_jst))}</td>
         <td>${esc(r.name)}</td>
         <td>${esc(r.department)}</td>
-        <td>${esc(r.status || "---")}</td>
         <td>${esc(r.type)}</td>
         <td>${esc(r.comment)}</td>
       `;
@@ -130,9 +124,9 @@
       try {
         const rows = await fetchRows();
         if(!rows.length) return;
-        const headers = ["日時","名前","所属","種別","理由","詳細"];
+        const headers = ["日時","名前","所属","理由","詳細"];
         const lines = [headers.join(","), ...rows.map(r => [
-          fmtJstText(r.created_at_jst), r.name, r.department, r.status||"", r.type, (r.comment||"").replace(/"/g,'""')
+          fmtJstText(r.created_at_jst), r.name, r.department, r.type, (r.comment||"").replace(/"/g,'""')
         ].map(v => `"${v}"`).join(","))];
         const blob = new Blob(["\uFEFF" + lines.join("\n")], { type:"text/csv" });
         const a = document.createElement("a");
