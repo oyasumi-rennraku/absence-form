@@ -74,20 +74,26 @@
 
   async function fetchRows(){
     const start = document.getElementById("startDate").value;
-    params.set("order", "created_at_jst.asc"); // asc に変えると古い順（元通り）
+    const end = document.getElementById("endDate").value; // ここが抜けていたのを修正
 
+    // 1. まず params を定義する
     const params = new URLSearchParams();
-    // フィルタ（branch）を一切かけず、以前の動作に完全に戻しました
+
+    // 2. その後に値を設定する（順番を修正しました）
     params.set("select", "created_at_jst,name,department,status,type,comment");
-    params.set("order", "created_at_jst.asc");
+    params.set("order", "created_at_jst.asc"); // 古い順に表示
 
     if (start) params.append("created_at_jst", `gte.${start}T00:00:00`);
     if (end)   params.append("created_at_jst", `lte.${end}T23:59:59`);
 
     const url = `${SUPABASE_URL}/rest/v1/absence_reports?${params.toString()}`;
     const res = await fetch(url, {
-      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+      headers: { 
+        "apikey": SUPABASE_KEY, 
+        "Authorization": `Bearer ${SUPABASE_KEY}` 
+      }
     });
+    
     if (!res.ok) throw new Error("取得失敗");
     return await res.json();
   }
