@@ -69,9 +69,11 @@
         <input id="name" required />
       </label>
 
-      <select id="department" required>
-  <option value="">読み込み中…</option>
-</select>
+      <label>所属
+        <select id="department" required>
+          <option value="">読み込み中…</option>
+        </select>
+      </label>
 
       <label>理由
         <select id="type">
@@ -88,8 +90,8 @@
       </label>
 
       <label>詳細
-  <textarea id="comment" rows="4" required></textarea>
-</label>
+        <textarea id="comment" rows="4" required></textarea>
+      </label>
 
 
       <button id="submitBtn" type="submit">送信</button>
@@ -136,10 +138,7 @@ async function loadDepartments() {
       }
     });
 
-    if (!res.ok) {
-      const t = await res.text();
-      throw new Error(`HTTP ${res.status}: ${t}`);
-    }
+    if (!res.ok) throw new Error("所属データの取得に失敗しました");
 
     const rows = await res.json();
     rows.forEach(r => {
@@ -149,7 +148,7 @@ async function loadDepartments() {
       select.appendChild(opt);
     });
   } catch (e) {
-    message.innerText = `所属の取得に失敗: ${e.message}`;
+    message.innerText = `エラー: ${e.message}`;
   }
 }
 
@@ -165,12 +164,11 @@ async function submitForm() {
   button.innerText = "送信中…";
   message.innerText = "";
 
-  // ★コメント必須（スペースだけNG）
   const commentEl = document.getElementById("comment");
   const commentTrimmed = commentEl.value.trim();
 
   if (!commentTrimmed) {
-    message.innerText = "詳細を入力してください（空欄やスペースのみは送信できません）。";
+    message.innerText = "詳細を入力してください。";
     commentEl.focus();
     button.disabled = false;
     button.innerText = "送信";
@@ -178,13 +176,12 @@ async function submitForm() {
     return;
   }
 
+  // ★ここを修正！存在しない branch と status を削除しました
   const data = {
     name: document.getElementById("name").value,
-    branch: 'Seto', // ★ここを追加！
-    status: document.getElementById("status").value, // ★HTMLに足したID="status"を読み込む
     department: document.getElementById("department").value,
     type: document.getElementById("type").value,
-    comment: commentTrimmed // ★trim後を保存
+    comment: commentTrimmed
   };
 
   try {
@@ -200,13 +197,17 @@ async function submitForm() {
     });
 
     if (res.ok) {
+      message.style.color = "blue";
       message.innerText = "送信しました。ご連絡ありがとうございます。";
       document.getElementById("absenceForm").reset();
     } else {
       const t = await res.text();
-      message.innerText = `送信に失敗しました: ${res.status} ${t}`;
+      message.style.color = "red";
+      message.innerText = "送信に失敗しました。管理者へ連絡してください。";
+      console.error(t);
     }
   } catch (e) {
+    message.style.color = "red";
     message.innerText = "通信エラーが発生しました。";
   } finally {
     button.disabled = false;
@@ -215,16 +216,11 @@ async function submitForm() {
   }
 }
 
-// --- 初期処理（1回だけ） ---
 window.addEventListener("DOMContentLoaded", () => {
   loadDepartments();
   updateNowTime();
   setInterval(updateNowTime, 1000);
 });
 </script>
-
-
 </body>
 </html>
-
-
