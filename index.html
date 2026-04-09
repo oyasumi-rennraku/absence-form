@@ -56,12 +56,11 @@
 <body>
   <div class="container">
    <h2>野田瀬戸支店　休み・遅刻　連絡フォーム</h2>
-<p id="nowTime" style="text-align:center; font-weight:bold;"></p>
-<p style="text-align:center; font-size:18px; color:#c00; font-weight:bold; line-height:1.7;">
-  翌日以降のお休み等に関しては、<br>
-  必ず事務所にお電話下さい。
-</p>
-
+   <p id="nowTime" style="text-align:center; font-weight:bold;"></p>
+   <p style="text-align:center; font-size:18px; color:#c00; font-weight:bold; line-height:1.7;">
+     翌日以降のお休み等に関しては、<br>
+     必ず事務所にお電話下さい。
+   </p>
 
     <form id="absenceForm" onsubmit="event.preventDefault(); submitForm();">
 
@@ -77,22 +76,21 @@
 
       <label>理由
         <select id="type">
-           <option value="体調不良">体調不良（軽度）</option>
-         <option value="病気">病気（感染症・通院含む）</option>
-         <option value="弔事">弔事</option>
-         <option value="天候不良">天候不良</option>
-         <option value="災害・事故">災害・事故</option>
-         <option value="公共交通機関の遅延・運休">公共交通機関の遅延・運休</option>
-         <option value="交通渋滞">交通渋滞</option>
-         <option value="急な家庭の事情">急な家庭の事情</option>
-         <option value="突発的なトラブル">突発的なトラブル</option>
+          <option value="体調不良">体調不良（軽度）</option>
+          <option value="病気">病気（感染症・通院含む）</option>
+          <option value="弔事">弔事</option>
+          <option value="天候不良">天候不良</option>
+          <option value="災害・事故">災害・事故</option>
+          <option value="公共交通機関の遅延・運休">公共交通機関の遅延・運休</option>
+          <option value="交通渋滞">交通渋滞</option>
+          <option value="急な家庭の事情">急な家庭の事情</option>
+          <option value="突発的なトラブル">突発的なトラブル</option>
         </select>
       </label>
 
       <label>詳細
         <textarea id="comment" rows="4" required></textarea>
       </label>
-
 
       <button id="submitBtn" type="submit">送信</button>
     </form>
@@ -106,11 +104,9 @@ const SUPABASE_KEY = "sb_publishable_5247tSd7ptdrSv6y0972rA_zm_6t99i";
 
 let sending = false;
 
-// --- 現在日時（秒まで） ---
 function updateNowTime(){
   const el = document.getElementById("nowTime");
   if (!el) return;
-
   const d = new Date();
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -118,28 +114,20 @@ function updateNowTime(){
   const hh = String(d.getHours()).padStart(2, "0");
   const mm = String(d.getMinutes()).padStart(2, "0");
   const ss = String(d.getSeconds()).padStart(2, "0");
-
   el.innerText = `現在日時：${y}-${m}-${day} ${hh}:${mm}:${ss}`;
 }
 
-// --- 所属読み込み ---
 async function loadDepartments() {
   const select = document.getElementById("department");
   const message = document.getElementById("message");
-
   select.innerHTML = '<option value="">選択してください</option>';
 
   try {
     const url = `${SUPABASE_URL}/rest/v1/departments?select=department_name,active,sort_order&active=eq.true&order=sort_order.asc.nullslast&order=department_name.asc`;
     const res = await fetch(url, {
-      headers: {
-        "apikey": SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`
-      }
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
     });
-
-    if (!res.ok) throw new Error("所属データの取得に失敗しました");
-
+    if (!res.ok) throw new Error("取得失敗");
     const rows = await res.json();
     rows.forEach(r => {
       const opt = document.createElement("option");
@@ -148,11 +136,10 @@ async function loadDepartments() {
       select.appendChild(opt);
     });
   } catch (e) {
-    message.innerText = `エラー: ${e.message}`;
+    message.innerText = `エラー: 所属リストの読み込みに失敗しました。`;
   }
 }
 
-// --- 送信 ---
 async function submitForm() {
   if (sending) return;
   sending = true;
@@ -164,24 +151,26 @@ async function submitForm() {
   button.innerText = "送信中…";
   message.innerText = "";
 
-  const commentEl = document.getElementById("comment");
-  const commentTrimmed = commentEl.value.trim();
+  const nameVal = document.getElementById("name").value.trim();
+  const deptVal = document.getElementById("department").value;
+  const typeVal = document.getElementById("type").value;
+  const commVal = document.getElementById("comment").value.trim();
 
-  if (!commentTrimmed) {
+  if (!commVal) {
+    message.style.color = "red";
     message.innerText = "詳細を入力してください。";
-    commentEl.focus();
     button.disabled = false;
     button.innerText = "送信";
     sending = false;
     return;
   }
 
-  // ★ここを修正！存在しない branch と status を削除しました
+  // ★ 修正：昨日の削除に合わせて、Supabaseにある項目だけに絞りました
   const data = {
-    name: document.getElementById("name").value,
-    department: document.getElementById("department").value,
-    type: document.getElementById("type").value,
-    comment: commentTrimmed
+    name: nameVal,
+    department: deptVal,
+    type: typeVal,
+    comment: commVal
   };
 
   try {
@@ -202,9 +191,9 @@ async function submitForm() {
       document.getElementById("absenceForm").reset();
     } else {
       const t = await res.text();
-      message.style.color = "red";
-      message.innerText = "送信に失敗しました。管理者へ連絡してください。";
       console.error(t);
+      message.style.color = "red";
+      message.innerText = "送信に失敗しました（サーバーエラー）。";
     }
   } catch (e) {
     message.style.color = "red";
