@@ -21,6 +21,24 @@
     .muted{color:#666;font-size:12px}
     .topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
     .pill{font-size:12px;background:#f0f0f0;padding:6px 10px;border-radius:999px}
+    
+    /* ページネーション用スタイル */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .pagination button {
+      width: auto;
+      padding: 8px 16px;
+      margin-top: 0;
+    }
+    .page-info {
+      font-weight: bold;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -41,7 +59,7 @@
 
     <div class="actions">
       <button id="searchBtn">表示（検索）</button>
-      <button id="csvBtn" style="background:#2b7;">CSVダウンロード</button>
+      <button id="csvBtn" style="background:#2b7;">CSVダウンロード（全件）</button>
     </div>
 
     <div id="msg"></div>
@@ -53,44 +71,86 @@
           <th>送信日時</th>
           <th>名前</th>
           <th>所属</th>
-          <th>区分</th> <!-- ★追加 -->
+          <th>区分</th>
           <th>理由</th>
           <th>コメント</th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
     </table>
+
+    <!-- ページ切替エリア -->
+    <div id="pagination" class="pagination" style="display:none;">
+      <button id="prevBtn">＜ 前の30件</button>
+      <span id="pageInfo" class="page-info">1 ページ目</span>
+      <button id="nextBtn">次の30件 ＞</button>
+    </div>
   </div>
 
 <script>
   const SUPABASE_URL = "https://ffpuqxyufqugotivqkgi.supabase.co";
   const SUPABASE_KEY = "sb_publishable_5247tSd7ptdrSv6y0972rA_zm_6t99i";
 
+  const PAGE_SIZE = 30; // 1ページあたりの表示件数
+  let currentPage = 1;
+  let totalRowsCount = 0;
+
   const msg = (t)=>{ const el=document.getElementById("msg"); if(el) el.innerText=t||""; };
-  const showTable = (on)=>{ const t=document.getElementById("tbl"); if(t) t.style.display = on ? "table" : "none"; };
+  const showTable = (on)=>{ 
+    const t=document.getElementById("tbl"); 
+    const p=document.getElementById("pagination");
+    if(t) t.style.display = on ? "table" : "none"; 
+    if(p) p.style.display = on ? "flex" : "none";
+  };
 
   function esc(v){ return v==null ? "" : String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
   function fmtJstText(s){ return s ? String(s).replace("T", " ").slice(0, 19) : ""; }
 
-  async function fetchRows(){
+  // データ取得関数（isForCsvがtrueの場合は全件、falseの場合は30件ずつ）
+  async function fetchRows(isForCsv = false){
     const start = document.getElementById("startDate").value;
     const end = document.getElementById("endDate").value;
 
     const params = new URLSearchParams();
-    // ★ report_type をセレクト対象に追加しました
     params.set("select", "created_at_jst,name,department,report_type,type,comment");
-    params.set("order", "created_at_jst.asc");
+    params.set("order", "created_at_jst.desc"); // 最新順に表示
 
     if (start) params.append("created_at_jst", `gte.${start}T00:00:00`);
     if (end)   params.append("created_at_jst", `lte.${end}T23:59:59`);
 
-    const url = `${SUPABASE_URL}/rest/v1/absence_reports?${params.toString()}`;
-    const res = await fetch(url, {
-      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
-    });
-    
-    if (!res.ok) throw new Error("取得失敗");
-    return await res.json();
+    // 画面表示用の場合は30件ずつ取得（ページネーション）
+    if (!isForCsv) {
+      const from = (currentPage - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      
+      const url = `${SUPABASE_URL}/rest/v1/absence_reports?${params.toString()}`;
+      const res = await fetch(url, {
+        headers: { 
+          "apikey": SUPABASE_KEY, 
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "Range": `${from}-${to}`,
+          "Prefer": "count=exact"
+        }
+      });
+
+      if (!res.ok) throw new Error("取得失敗");
+      
+      // 総件数の取得
+      const contentRange = res.headers.get("content-range");
+      if (contentRange) {
+        totalRowsCount = parseInt(contentRange.split("/")[1]) || 0;
+      }
+      
+      return await res.json();
+    } else {
+      // CSV用は全件取得
+      const url = `${SUPABASE_URL}/rest/v1/absence_reports?${params.toString()}`;
+      const res = await fetch(url, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+      });
+      if (!res.ok) throw new Error("取得失敗");
+      return await res.json();
+    }
   }
 
   function renderTable(rows){
@@ -98,7 +158,6 @@
     tbody.innerHTML = "";
     rows.forEach(r=>{
       const tr = document.createElement("tr");
-      // ★ テーブル表示に「区分（report_type）」を追加しました
       tr.innerHTML = `
         <td>${esc(fmtJstText(r.created_at_jst))}</td>
         <td>${esc(r.name)}</td>
@@ -110,30 +169,59 @@
       tbody.appendChild(tr);
     });
     showTable(rows.length > 0);
+    updatePaginationControls();
+  }
+
+  function updatePaginationControls() {
+    const maxPage = Math.ceil(totalRowsCount / PAGE_SIZE) || 1;
+    document.getElementById("pageInfo").innerText = `${currentPage} / ${maxPage} ページ（全 ${totalRowsCount} 件）`;
+    document.getElementById("prevBtn").disabled = (currentPage === 1);
+    document.getElementById("nextBtn").disabled = (currentPage >= maxPage);
+  }
+
+  async function loadPage(page) {
+    currentPage = page;
+    msg("取得中…");
+    try {
+      const rows = await fetchRows(false);
+      renderTable(rows);
+      msg(`表示しました（${rows.length}件表示中）`);
+    } catch(e) { 
+      msg("失敗: " + e.message); 
+    }
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("searchBtn").onclick = async ()=>{
-      msg("取得中…");
-      try{
-        const rows = await fetchRows();
-        renderTable(rows);
-        msg(`表示しました（${rows.length}件）`);
-      }catch(e){ msg("失敗: " + e.message); }
+    // 検索ボタン
+    document.getElementById("searchBtn").onclick = () => {
+      loadPage(1);
     };
 
+    // ページ切替ボタン
+    document.getElementById("prevBtn").onclick = () => {
+      if (currentPage > 1) loadPage(currentPage - 1);
+    };
+    document.getElementById("nextBtn").onclick = () => {
+      const maxPage = Math.ceil(totalRowsCount / PAGE_SIZE);
+      if (currentPage < maxPage) loadPage(currentPage + 1);
+    };
+
+    // CSVダウンロードボタン（表示中に関わらず指定条件の全件をダウンロード）
     document.getElementById("csvBtn").onclick = async ()=>{
       try {
-        const rows = await fetchRows();
-        if(!rows.length) return;
+        msg("CSV出力用データ取得中…");
+        const rows = await fetchRows(true);
+        if(!rows.length) {
+          msg("対象データがありません");
+          return;
+        }
         
-        // ★ CSVヘッダーに「区分」を追加しました
         const headers = ["日時","名前","所属","区分","理由","詳細"];
         const lines = [headers.join(","), ...rows.map(r => [
           fmtJstText(r.created_at_jst), 
           r.name, 
           r.department, 
-          r.report_type || "", // ★ CSV出力データに「区分」を追加
+          r.report_type || "", 
           r.type, 
           (r.comment||"").replace(/"/g,'""')
         ].map(v => `"${v}"`).join(","))];
@@ -143,6 +231,7 @@
         a.href = URL.createObjectURL(blob);
         a.download = "欠勤遅刻連絡一覧.csv";
         a.click();
+        msg("CSVのダウンロードが完了しました");
       } catch(e) { msg("失敗: " + e.message); }
     };
   });
