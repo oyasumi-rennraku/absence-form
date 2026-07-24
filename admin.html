@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>野田瀬戸支店　欠勤連絡 管理ページ（閲覧・CSV）</title>
+  <title>野田瀬戸支店 欠勤連絡 管理ページ（閲覧・CSV）</title>
   <style>
     body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;padding:20px}
     .card{max-width:1050px;margin:auto;background:#fff;padding:18px;border-radius:10px}
@@ -26,7 +26,7 @@
 <body>
   <div class="card">
     <div class="topbar">
-      <h2>野田瀬戸支店　欠勤連絡 管理ページ（閲覧・CSV）</h2>
+      <h2>野田瀬戸支店 欠勤連絡 管理ページ（閲覧・CSV）</h2>
       <div class="pill">管理者のみ共有（URL秘匿）</div>
     </div>
 
@@ -53,6 +53,7 @@
           <th>送信日時</th>
           <th>名前</th>
           <th>所属</th>
+          <th>区分</th> <!-- ★追加 -->
           <th>理由</th>
           <th>コメント</th>
         </tr>
@@ -76,8 +77,8 @@
     const end = document.getElementById("endDate").value;
 
     const params = new URLSearchParams();
-    // ★ 削除した status と branch をセレクト対象から外しました
-    params.set("select", "created_at_jst,name,department,type,comment");
+    // ★ report_type をセレクト対象に追加しました
+    params.set("select", "created_at_jst,name,department,report_type,type,comment");
     params.set("order", "created_at_jst.asc");
 
     if (start) params.append("created_at_jst", `gte.${start}T00:00:00`);
@@ -97,11 +98,12 @@
     tbody.innerHTML = "";
     rows.forEach(r=>{
       const tr = document.createElement("tr");
-      // ★ テーブルの表示項目も元に戻しました
+      // ★ テーブル表示に「区分（report_type）」を追加しました
       tr.innerHTML = `
         <td>${esc(fmtJstText(r.created_at_jst))}</td>
         <td>${esc(r.name)}</td>
         <td>${esc(r.department)}</td>
+        <td>${esc(r.report_type || "")}</td>
         <td>${esc(r.type)}</td>
         <td>${esc(r.comment)}</td>
       `;
@@ -124,14 +126,22 @@
       try {
         const rows = await fetchRows();
         if(!rows.length) return;
-        const headers = ["日時","名前","所属","理由","詳細"];
+        
+        // ★ CSVヘッダーに「区分」を追加しました
+        const headers = ["日時","名前","所属","区分","理由","詳細"];
         const lines = [headers.join(","), ...rows.map(r => [
-          fmtJstText(r.created_at_jst), r.name, r.department, r.type, (r.comment||"").replace(/"/g,'""')
+          fmtJstText(r.created_at_jst), 
+          r.name, 
+          r.department, 
+          r.report_type || "", // ★ CSV出力データに「区分」を追加
+          r.type, 
+          (r.comment||"").replace(/"/g,'""')
         ].map(v => `"${v}"`).join(","))];
+        
         const blob = new Blob(["\uFEFF" + lines.join("\n")], { type:"text/csv" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = "欠勤連絡一覧.csv";
+        a.download = "欠勤遅刻連絡一覧.csv";
         a.click();
       } catch(e) { msg("失敗: " + e.message); }
     };
