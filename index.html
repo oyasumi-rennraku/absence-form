@@ -55,12 +55,12 @@
 
 <body>
   <div class="container">
-   <h2>野田瀬戸支店 休み・遅刻 連絡フォーム</h2>
-   <p id="nowTime" style="text-align:center; font-weight:bold;"></p>
-   <p style="text-align:center; font-size:18px; color:#c00; font-weight:bold; line-height:1.7;">
+    <h2>野田瀬戸支店 休み・遅刻 連絡フォーム</h2>
+    <p id="nowTime" style="text-align:center; font-weight:bold;"></p>
+    <p style="text-align:center; font-size:18px; color:#c00; font-weight:bold; line-height:1.7;">
       翌日以降のお休み等に関しては、<br>
       必ず事務所にお電話下さい。
-   </p>
+    </p>
 
     <form id="absenceForm" onsubmit="event.preventDefault(); submitForm();">
 
@@ -74,15 +74,15 @@
         </select>
       </label>
 
-      <!-- ★ 報告区分の選択を追加 -->
+      <!-- 報告区分（「選択してください」を初期表示） -->
       <label>報告区分
         <select id="report_type" required>
+          <option value="">選択してください</option>
           <option value="欠勤">欠勤</option>
           <option value="遅刻">遅刻</option>
-         </select>
+        </select>
       </label>
 
-      <!-- 理由は元の内容のまま維持 -->
       <label>理由
         <select id="type">
           <option value="体調不良">体調不良（軽度）</option>
@@ -162,13 +162,22 @@ async function submitForm() {
 
   const nameVal = document.getElementById("name").value.trim();
   const deptVal = document.getElementById("department").value;
-  const reportTypeVal = document.getElementById("report_type").value; // ★追加
+  const reportTypeVal = document.getElementById("report_type").value;
   const typeVal = document.getElementById("type").value;
   const commVal = document.getElementById("comment").value.trim();
 
+  if (!deptVal) {
+    message.style.color = "red";
+    message.innerText = "所属を選択してください。";
+    button.disabled = false;
+    button.innerText = "送信";
+    sending = false;
+    return;
+  }
+
   if (!reportTypeVal) {
     message.style.color = "red";
-    message.innerText = "報告区分（遅刻・欠勤・早退）を選択してください。";
+    message.innerText = "報告区分（遅刻・欠勤）を選択してください。";
     button.disabled = false;
     button.innerText = "送信";
     sending = false;
@@ -184,11 +193,10 @@ async function submitForm() {
     return;
   }
 
-  // ★ Supabase送信用データに report_type を追加
   const data = {
     name: nameVal,
     department: deptVal,
-    report_type: reportTypeVal, // ★追加（Supabaseの「report_type」列に保存されます）
+    report_type: reportTypeVal,
     type: typeVal,
     comment: commVal
   };
